@@ -1,0 +1,345 @@
+-- PESSOAS
+INSERT INTO tb_pessoas (cpf, nome, data_nascimento) VALUES
+('12345678901', 'Alan Turing', '1912-06-23'),
+('23456789012', 'Ada Lovelace', '1815-12-10'),
+('34567890123', 'Grace Hopper', '1906-12-09'),
+('45678901234', 'Linus Torvalds', '1969-12-28'),
+('56789012345', 'Dennis Ritchie', '1941-09-09'),
+('67890123456', 'Ken Thompson', '1943-02-04'),
+('78901234567', 'Margaret Hamilton', '1936-08-17'),
+('89012345678', 'Tim Berners-Lee', '1955-06-08');
+
+-- TELEFONES
+INSERT INTO tb_telefones (cpf_pessoa, ddd, numero, tipo) VALUES
+('12345678901', '11', '987654321', 'Celular'),
+('23456789012', '21', '998765432', 'Celular'),
+('34567890123', '31', '976543210', 'Residencial'),
+('45678901234', '41', '965432109', 'Comercial');
+
+-- EMAILS
+INSERT INTO tb_emails (cpf_pessoa, email) VALUES
+('12345678901', 'alan.turing@sisgesc.com'),
+('23456789012', 'ada.lovelace@sisgesc.com'),
+('34567890123', 'grace.hopper@sisgesc.com'),
+('45678901234', 'linus.torvalds@sisgesc.com');
+
+-- ENDEREÇOS
+INSERT INTO tb_enderecos (
+cpf_pessoa, tipo, cep, numero, rua, complemento, bairro, cidade, estado
+) VALUES
+('12345678901', 'Residencial', '01001000', '42', 'Rua Enigma', 'Casa', 'Centro', 'São Paulo', 'SP'),
+('23456789012', 'Residencial', '20040002', '15', 'Rua Analítica', 'Apto 1', 'Copacabana', 'Rio de Janeiro', 'RJ'),
+('34567890123', 'Residencial', '30110000', '99', 'Rua COBOL', 'Casa', 'Savassi', 'Belo Horizonte', 'MG');
+
+-- ALUNOS
+INSERT INTO tb_alunos (cpf_aluno, status) VALUES
+('12345678901', 'Ativo'),
+('23456789012', 'Ativo'),
+('78901234567', 'Ativo');
+
+-- FUNCIONÁRIOS
+INSERT INTO tb_funcionarios (cpf_funcionario, data_contratacao, status) VALUES
+('34567890123', '2020-01-15', 'Ativo'),
+('45678901234', '2019-08-10', 'Ativo'),
+('56789012345', '2018-03-20', 'Ativo');
+
+-- CARGOS
+INSERT INTO tb_cargos (cod_cargo, nome_cargo) VALUES
+(1, 'Professor'),
+(2, 'Coordenador'),
+(3, 'Administrador');
+
+-- CARGOS FUNCIONÁRIO
+INSERT INTO tb_cargos_funcionario (
+cpf_funcionario, cod_cargo, data_inicio, data_fim, ativo
+) VALUES
+('34567890123', 1, '2020-01-15', NULL, TRUE),
+('45678901234', 2, '2019-08-10', NULL, TRUE),
+('56789012345', 3, '2018-03-20', NULL, TRUE);
+
+-- BENEFÍCIOS
+INSERT INTO tb_beneficios (tipo, valor_inicial, valor_final) VALUES
+('Vale Transporte', 150.00, 400.00),
+('Vale Alimentação', 300.00, 800.00);
+
+-- IDIOMAS
+INSERT INTO tb_idiomas (codigo_idioma, nome) VALUES
+('ENG', 'Inglês'),
+('JPN', 'Japonês'),
+('FRA', 'Francês');
+
+-- NÍVEIS
+INSERT INTO tb_niveis (codigo_nivel, nome) VALUES
+('BAS', 'Básico'),
+('INT', 'Intermediário'),
+('ADV', 'Avançado');
+
+-- CURSOS
+INSERT INTO tb_cursos (
+codigo_idioma, codigo_nivel, nome_curso, carga_horaria
+) VALUES
+('ENG', 'BAS', 'English Fundamentals', 60),
+('JPN', 'BAS', 'Japanese Essentials', 80),
+('FRA', 'INT', 'French Intermediate', 70);
+
+-- SALAS
+INSERT INTO tb_salas (numero_sala, capacidade) VALUES
+('LAB01', 25),
+('LAB02', 20);
+
+-- TURMAS
+INSERT INTO tb_turmas (
+codigo_idioma, codigo_nivel, numero_sala, horario,
+cpf_professor, data_inicio, data_fim, status
+) VALUES
+('ENG', 'BAS', 'LAB01', '19:00',
+'34567890123', '2026-02-01', '2026-07-01', 'Ativa'),
+
+('JPN', 'BAS', 'LAB02', '18:00',
+'45678901234', '2026-02-01', '2026-07-01', 'Ativa');
+
+-- PROFESSORES TURMAS
+INSERT INTO tb_professores_turmas (
+cpf_professor, codigo_idioma, codigo_nivel,
+numero_sala, horario
+) VALUES
+('34567890123', 'ENG', 'BAS', 'LAB01', '19:00'),
+('45678901234', 'JPN', 'BAS', 'LAB02', '18:00');
+
+-- AULAS
+INSERT INTO tb_aulas (
+codigo_idioma, codigo_nivel, numero_sala, horario,
+data_aula, cpf_professor, hora_inicio,
+intervalo, hora_fim, status
+) VALUES
+('ENG', 'BAS', 'LAB01', '19:00',
+'2026-05-10', '34567890123',
+'19:00:00', '00:15:00', '21:00:00', 'Concluída');
+
+-- MATRÍCULAS
+INSERT INTO tb_matriculas (
+cpf_aluno, codigo_idioma, codigo_nivel,
+numero_sala, horario, data_matricula,
+desconto, bolsa, status
+) VALUES
+('12345678901', 'ENG', 'BAS', 'LAB01',
+'19:00', '2026-02-01', 0, 0, 'Ativa'),
+
+('23456789012', 'ENG', 'BAS', 'LAB01',
+'19:00', '2026-02-01', 10, 0, 'Ativa');
+
+-- MENSALIDADES
+INSERT INTO tb_mensalidades (
+cpf_aluno, codigo_idioma, codigo_nivel,
+numero_sala, horario, data_vencimento,
+data_pagamento, valor, status
+) VALUES
+('12345678901', 'ENG', 'BAS', 'LAB01',
+'19:00', '2026-06-10', NULL, 350.00, 'Pendente');
+
+-- FATURAMENTOS
+INSERT INTO tb_faturamentos (
+numero_documento, cpf_aluno_mens,
+codigo_idioma, codigo_nivel,
+numero_sala, horario, data_vencimento,
+tipo_documento, data_emissao, valor
+) VALUES
+('FAT2026001', '12345678901',
+'ENG', 'BAS', 'LAB01', '19:00',
+'2026-06-10', 'Boleto',
+'2026-06-01', 350.00);
+
+-- FORNECEDORES
+INSERT INTO tb_fornecedores (
+cnpj, cpf_pessoa, nome_fantasia
+) VALUES
+('12345678000199', '56789012345', 'Tech Books Supplier');
+
+-- CATEGORIAS DESPESAS
+INSERT INTO tb_categorias_despesas (
+codigo_categoria, nome, tipo
+) VALUES
+('ENERGIA', 'Energia Elétrica', 'Fixa'),
+('MATERIAL', 'Material Didático', 'Variável');
+
+-- FATURAS
+INSERT INTO tb_faturas (
+cnpj_fornecedor, numero_fatura,
+codigo_categoria, descricao,
+valor_original, juros, multa,
+data_emissao, data_vencimento, status
+) VALUES
+('12345678000199', 'NF001',
+'MATERIAL', 'Livros didáticos',
+1200.00, 0, 0,
+'2026-05-01', '2026-05-30', 'Aberta');
+
+-- PAGAMENTOS FATURAS
+INSERT INTO tb_pagamentos_faturas (
+cnpj_fornecedor, numero_fatura, data_pagamento,
+valor_pago, metodo_pagamento, comprovante_url
+) VALUES
+('12345678000199', 'NF001', '2026-05-15',
+1200.00, 'PIX', 'comprovante_nf001.pdf');
+
+-- FOLHA DE PAGAMENTO
+INSERT INTO tb_folha_pagamento (
+cpf_funcionario, mes, ano,
+valor_base, bonus, descontos,
+valor_final, status
+) VALUES
+('34567890123', 5, 2026,
+4500.00, 500.00, 300.00,
+4700.00, 'Pago');
+
+-- PAGAMENTO FUNCIONÁRIOS
+INSERT INTO tb_pagamentos_funcionarios (
+cpf_funcionario, mes, ano,
+data_pagamento, metodo_pagamento,
+comprovante_url
+) VALUES
+('34567890123', 5, 2026,
+'2026-05-05', 'PIX',
+'comprovante_grace.pdf');
+
+-- PAGAMENTO BENEFÍCIOS
+INSERT INTO tb_pagamentos_beneficios (
+tipo, cpf_funcionarios, comprovante_pagamento,
+ano, mes, data_pagamento,
+metodo_pagamento, status
+) VALUES
+('Vale Transporte', '34567890123',
+'beneficio_maio.pdf',
+2026, 5, '2026-05-05',
+'PIX', 'Pago');
+
+-- PEDIDOS COMPRA
+INSERT INTO tb_pedidos_compra (
+cpf_solicitante, data_pedido, status
+) VALUES
+('56789012345', '2026-05-01', 'Pendente');
+
+-- ITENS PEDIDO
+INSERT INTO tb_itens_pedido (
+cpf_solicitante, data_pedido,
+descricao, quantidade, valor_unitario
+) VALUES
+('56789012345', '2026-05-01',
+'Livros de Inglês', 30, 40.00);
+
+-- FREQUÊNCIAS
+INSERT INTO tb_frequencias (
+cpf_aluno, codigo_idioma,
+codigo_nivel, numero_sala,
+horario, data_aula,
+presente, observacao
+) VALUES
+('12345678901', 'ENG', 'BAS',
+'LAB01', '19:00',
+'2026-05-10', TRUE,
+'Participação excelente');
+
+-- AVALIAÇÕES
+INSERT INTO tb_avaliacoes (
+codigo_idioma, codigo_nivel,
+numero_sala, horario,
+titulo, tipo,
+data_avaliacao, peso
+) VALUES
+('ENG', 'BAS', 'LAB01',
+'19:00', 'Midterm Test',
+'Escrita', '2026-06-15', 10.00);
+
+-- NOTAS
+INSERT INTO tb_notas (
+cpf_aluno, codigo_idioma,
+codigo_nivel, numero_sala,
+horario, titulo_avaliacao,
+nota, observacao
+) VALUES
+('12345678901', 'ENG', 'BAS',
+'LAB01', '19:00',
+'Midterm Test', 9.50,
+'Excelente desempenho');
+
+-- REGISTROS DE PONTO
+INSERT INTO tb_registros_ponto (
+cpf_funcionario, data,
+hora_entrada, hora_saida
+) VALUES
+('34567890123', '2026-05-09',
+'08:00:00', '17:30:00');
+
+-- EXPULSOS
+INSERT INTO tb_expulsos (
+nome_do_aluno, data_expulsao, cpf_aluno_expulso
+) VALUES
+('Ada Lovelace', '2026-04-20', '23456789012');
+
+-- Select count com union all para facilitar a visualização
+
+SELECT 'tb_pessoas' AS tabela, COUNT(*) AS total FROM tb_pessoas
+UNION ALL
+SELECT 'tb_telefones', COUNT(*) FROM tb_telefones
+UNION ALL
+SELECT 'tb_emails', COUNT(*) FROM tb_emails
+UNION ALL
+SELECT 'tb_enderecos', COUNT(*) FROM tb_enderecos
+UNION ALL
+SELECT 'tb_alunos', COUNT(*) FROM tb_alunos
+UNION ALL
+SELECT 'tb_funcionarios', COUNT(*) FROM tb_funcionarios
+UNION ALL
+SELECT 'tb_cargos', COUNT(*) FROM tb_cargos
+UNION ALL
+SELECT 'tb_cargos_funcionario', COUNT(*) FROM tb_cargos_funcionario
+UNION ALL
+SELECT 'tb_beneficios', COUNT(*) FROM tb_beneficios
+UNION ALL
+SELECT 'tb_idiomas', COUNT(*) FROM tb_idiomas
+UNION ALL
+SELECT 'tb_niveis', COUNT(*) FROM tb_niveis
+UNION ALL
+SELECT 'tb_cursos', COUNT(*) FROM tb_cursos
+UNION ALL
+SELECT 'tb_salas', COUNT(*) FROM tb_salas
+UNION ALL
+SELECT 'tb_turmas', COUNT(*) FROM tb_turmas
+UNION ALL
+SELECT 'tb_professores_turmas', COUNT(*) FROM tb_professores_turmas
+UNION ALL
+SELECT 'tb_aulas', COUNT(*) FROM tb_aulas
+UNION ALL
+SELECT 'tb_matriculas', COUNT(*) FROM tb_matriculas
+UNION ALL
+SELECT 'tb_mensalidades', COUNT(*) FROM tb_mensalidades
+UNION ALL
+SELECT 'tb_faturamentos', COUNT(*) FROM tb_faturamentos
+UNION ALL
+SELECT 'tb_fornecedores', COUNT(*) FROM tb_fornecedores
+UNION ALL
+SELECT 'tb_categorias_despesas', COUNT(*) FROM tb_categorias_despesas
+UNION ALL
+SELECT 'tb_faturas', COUNT(*) FROM tb_faturas
+UNION ALL
+SELECT 'tb_pagamentos_faturas', COUNT(*) FROM tb_pagamentos_faturas
+UNION ALL
+SELECT 'tb_folha_pagamento', COUNT(*) FROM tb_folha_pagamento
+UNION ALL
+SELECT 'tb_pagamentos_funcionarios', COUNT(*) FROM tb_pagamentos_funcionarios
+UNION ALL
+SELECT 'tb_pagamentos_beneficios', COUNT(*) FROM tb_pagamentos_beneficios
+UNION ALL
+SELECT 'tb_pedidos_compra', COUNT(*) FROM tb_pedidos_compra
+UNION ALL
+SELECT 'tb_itens_pedido', COUNT(*) FROM tb_itens_pedido
+UNION ALL
+SELECT 'tb_frequencias', COUNT(*) FROM tb_frequencias
+UNION ALL
+SELECT 'tb_avaliacoes', COUNT(*) FROM tb_avaliacoes
+UNION ALL
+SELECT 'tb_notas', COUNT(*) FROM tb_notas
+UNION ALL
+SELECT 'tb_registros_ponto', COUNT(*) FROM tb_registros_ponto
+UNION ALL
+SELECT 'tb_expulsos', COUNT(*) FROM tb_expulsos; 

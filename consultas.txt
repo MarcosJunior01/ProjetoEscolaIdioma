@@ -1,0 +1,570 @@
+
+USE projetoSisgesc;
+
+-- ============================================================
+-- ÍNDICES RECOMENDADOS PARA PERFORMANCE
+-- ============================================================
+
+CREATE INDEX idx_mensalidades_status_venc  ON tb_mensalidades  (status, data_vencimento);
+CREATE INDEX idx_frequencias_aluno_turma   ON tb_frequencias   (cpf_aluno, codigo_idioma, codigo_nivel, numero_sala, horario);
+CREATE INDEX idx_notas_aluno_turma         ON tb_notas         (cpf_aluno, codigo_idioma, codigo_nivel, numero_sala, horario);
+CREATE INDEX idx_matriculas_status         ON tb_matriculas    (status);
+CREATE INDEX idx_faturas_status_venc       ON tb_faturas       (status, data_vencimento);
+CREATE INDEX idx_folha_mes_ano             ON tb_folha_pagamento (mes, ano);
+CREATE INDEX idx_aulas_turma_data          ON tb_aulas         (codigo_idioma, codigo_nivel, numero_sala, horario, data_aula);
+CREATE INDEX idx_registros_ponto_func_data ON tb_registros_ponto (cpf_funcionario, data);
+
+
+-- ============================================================
+-- BLOCO 1 — ACADÊMICO
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 1.1 Alunos com frequência abaixo de 75% por turma
+-- ------------------------------------------------------------
+SELECT
+    f.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    f.codigo_idioma,
+    f.codigo_nivel,
+    f.numero_sala,
+    f.horario,
+    COUNT(*)                                                      AS total_aulas,
+    SUM(f.presente)                                               AS aulas_presentes,
+    ROUND(SUM(f.presente) / COUNT(*) * 100, 2)                   AS percentual_frequencia
+FROM tb_frequencias f
+INNER JOIN tb_pessoas p ON p.cpf = f.cpf_aluno
+GROUP BY
+    f.cpf_aluno,
+    p.nome,
+    f.codigo_idioma,
+    f.codigo_nivel,
+    f.numero_sala,
+    f.horario
+HAVING percentual_frequencia < 75
+ORDER BY percentual_frequencia ASC;
+
+
+-- ------------------------------------------------------------
+-- 1.2 Média ponderada de notas por aluno por turma
+-- ------------------------------------------------------------
+SELECT
+    n.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    n.codigo_idioma,
+    n.codigo_nivel,
+    n.numero_sala,
+    n.horario,
+    ROUND(SUM(n.nota * a.peso) / SUM(a.peso), 2)                 AS media_ponderada
+FROM tb_notas n
+INNER JOIN tb_avaliacoes a
+        ON  a.codigo_idioma = n.codigo_idioma
+        AND a.codigo_nivel  = n.codigo_nivel
+        AND a.numero_sala   = n.numero_sala
+        AND a.horario       = n.horario
+        AND a.titulo        = n.titulo_avaliacao
+INNER JOIN tb_pessoas p ON p.cpf = n.cpf_aluno
+GROUP BY
+    n.cpf_aluno,
+    p.nome,
+    n.codigo_idioma,
+    n.codigo_nivel,
+    n.numero_sala,
+    n.horario
+ORDER BY media_ponderada DESC;
+
+
+-- ------------------------------------------------------------
+-- 1.3 Ranking de alunos por nota dentro de cada turma
+-- ------------------------------------------------------------
+SELECT
+    n.codigo_idioma,
+    n.codigo_nivel,
+    n.numero_sala,
+    n.horario,
+    n.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    ROUND(SUM(n.nota * a.peso) / SUM(a.peso), 2)                 AS media_ponderada,
+    RANK() OVER (
+        PARTITION BY n.codigo_idioma, n.codigo_nivel, n.numero_sala, n.horario
+        ORDER BY SUM(n.nota * a.peso) / SUM(a.peso) DESC
+    )                                                             AS ranking
+FROM tb_notas n
+INNER JOIN tb_avaliacoes a
+        ON  a.codigo_idioma = n.codigo_idioma
+        AND a.codigo_nivel  = n.codigo_nivel
+        AND a.numero_sala   = n.numero_sala
+        AND a.horario       = n.horario
+        AND a.titulo        = n.titulo_avaliacao
+INNER JOIN tb_pessoas p ON p.cpf = n.cpf_aluno
+GROUP BY
+    n.codigo_idioma,
+    n.codigo_nivel,
+    n.numero_sala,
+    n.horario,
+    n.cpf_aluno,
+    p.nome
+ORDER BY
+    n.codigo_idioma,
+    n.codigo_nivel,
+    n.numero_sala,
+    n.horario,
+    ranking;
+
+
+-- ------------------------------------------------------------
+-- 1.4 Turmas com vagas disponíveis
+-- ------------------------------------------------------------
+SELECT
+    t.codigo_idioma,
+    t.codigo_nivel,
+    t.numero_sala,
+    t.horario,
+    s.capacidade,
+    COUNT(m.cpf_aluno)                                            AS matriculados,
+    s.capacidade - COUNT(m.cpf_aluno)                            AS vagas_disponiveis
+FROM tb_turmas t
+INNER JOIN tb_salas s ON s.numero_sala = t.numero_sala
+LEFT JOIN tb_matriculas m
+       ON  m.codigo_idioma = t.codigo_idioma
+       AND m.codigo_nivel  = t.codigo_nivel
+       AND m.numero_sala   = t.numero_sala
+       AND m.horario       = t.horario
+       AND m.status        = 'ativo'
+GROUP BY
+    t.codigo_idioma,
+    t.codigo_nivel,
+    t.numero_sala,
+    t.horario,
+    s.capacidade
+HAVING vagas_disponiveis > 0
+ORDER BY vagas_disponiveis DESC;
+
+
+-- ------------------------------------------------------------
+-- 1.5 Alunos matriculados em mais de uma turma simultaneamente
+-- ------------------------------------------------------------
+SELECT
+    m.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    COUNT(*)                                                      AS total_turmas
+FROM tb_matriculas m
+INNER JOIN tb_pessoas p ON p.cpf = m.cpf_aluno
+WHERE m.status = 'ativo'
+GROUP BY m.cpf_aluno, p.nome
+HAVING total_turmas > 1
+ORDER BY total_turmas DESC;
+
+
+-- ------------------------------------------------------------
+-- 1.6 Histórico completo de um aluno (turmas, notas, frequência, mensalidades)
+--     Substitua '00100200300' pelo CPF desejado
+-- ------------------------------------------------------------
+SELECT
+    'MATRÍCULA'                                                   AS tipo,
+    m.codigo_idioma,
+    m.codigo_nivel,
+    m.numero_sala,
+    m.horario,
+    m.data_matricula                                              AS data_ref,
+    m.status,
+    NULL                                                          AS valor,
+    NULL                                                          AS detalhe
+FROM tb_matriculas m
+WHERE m.cpf_aluno = '00100200300'
+
+UNION ALL
+
+SELECT
+    'NOTA',
+    n.codigo_idioma,
+    n.codigo_nivel,
+    n.numero_sala,
+    n.horario,
+    a.data_avaliacao,
+    NULL,
+    n.nota,
+    n.titulo_avaliacao
+FROM tb_notas n
+INNER JOIN tb_avaliacoes a
+        ON  a.codigo_idioma = n.codigo_idioma
+        AND a.codigo_nivel  = n.codigo_nivel
+        AND a.numero_sala   = n.numero_sala
+        AND a.horario       = n.horario
+        AND a.titulo        = n.titulo_avaliacao
+WHERE n.cpf_aluno = '00100200300'
+
+UNION ALL
+
+SELECT
+    'FREQUÊNCIA',
+    f.codigo_idioma,
+    f.codigo_nivel,
+    f.numero_sala,
+    f.horario,
+    f.data_aula,
+    CASE WHEN f.presente THEN 'presente' ELSE 'ausente' END,
+    NULL,
+    f.observacao
+FROM tb_frequencias f
+WHERE f.cpf_aluno = '00100200300'
+
+UNION ALL
+
+SELECT
+    'MENSALIDADE',
+    ms.codigo_idioma,
+    ms.codigo_nivel,
+    ms.numero_sala,
+    ms.horario,
+    ms.data_vencimento,
+    ms.status,
+    ms.valor,
+    NULL
+FROM tb_mensalidades ms
+WHERE ms.cpf_aluno = '00100200300'
+
+ORDER BY data_ref;
+
+
+-- ============================================================
+-- BLOCO 2 — FINANCEIRO: ALUNOS
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 2.1 Mensalidades em aberto com dias de atraso
+-- ------------------------------------------------------------
+SELECT
+    ms.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    ms.codigo_idioma,
+    ms.codigo_nivel,
+    ms.numero_sala,
+    ms.horario,
+    ms.data_vencimento,
+    ms.valor,
+    DATEDIFF(CURDATE(), ms.data_vencimento)                      AS dias_atraso
+FROM tb_mensalidades ms
+INNER JOIN tb_pessoas p ON p.cpf = ms.cpf_aluno
+WHERE ms.status = 'pendente'
+  AND ms.data_vencimento < CURDATE()
+ORDER BY dias_atraso DESC;
+
+
+-- ------------------------------------------------------------
+-- 2.2 Inadimplência geral — alunos com mensalidade vencida e não paga
+-- ------------------------------------------------------------
+SELECT
+    ms.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    COUNT(*)                                                      AS mensalidades_em_aberto,
+    SUM(ms.valor)                                                 AS total_devido
+FROM tb_mensalidades ms
+INNER JOIN tb_pessoas p ON p.cpf = ms.cpf_aluno
+WHERE ms.status = 'pendente'
+  AND ms.data_vencimento < CURDATE()
+GROUP BY ms.cpf_aluno, p.nome
+ORDER BY total_devido DESC;
+
+
+-- ------------------------------------------------------------
+-- 2.3 Receita mensal realizada vs esperada por turma
+-- ------------------------------------------------------------
+SELECT
+    ms.codigo_idioma,
+    ms.codigo_nivel,
+    ms.numero_sala,
+    ms.horario,
+    MONTH(ms.data_vencimento)                                     AS mes,
+    YEAR(ms.data_vencimento)                                      AS ano,
+    SUM(ms.valor)                                                 AS receita_esperada,
+    SUM(CASE WHEN ms.status = 'pago' THEN ms.valor ELSE 0 END)   AS receita_realizada,
+    SUM(CASE WHEN ms.status = 'pendente' THEN ms.valor ELSE 0 END) AS receita_pendente
+FROM tb_mensalidades ms
+GROUP BY
+    ms.codigo_idioma,
+    ms.codigo_nivel,
+    ms.numero_sala,
+    ms.horario,
+    MONTH(ms.data_vencimento),
+    YEAR(ms.data_vencimento)
+ORDER BY ano, mes;
+
+
+-- ------------------------------------------------------------
+-- 2.4 Alunos com bolsa ou desconto ativo e impacto na receita
+-- ------------------------------------------------------------
+SELECT
+    m.cpf_aluno,
+    p.nome                                                        AS nome_aluno,
+    m.codigo_idioma,
+    m.codigo_nivel,
+    m.desconto,
+    m.bolsa,
+    ms.valor                                                      AS mensalidade_cobrada,
+    ms.valor + m.desconto + m.bolsa                              AS mensalidade_cheia_estimada,
+    m.desconto + m.bolsa                                         AS total_beneficio
+FROM tb_matriculas m
+INNER JOIN tb_pessoas p ON p.cpf = m.cpf_aluno
+INNER JOIN tb_mensalidades ms
+        ON  ms.cpf_aluno     = m.cpf_aluno
+        AND ms.codigo_idioma = m.codigo_idioma
+        AND ms.codigo_nivel  = m.codigo_nivel
+        AND ms.numero_sala   = m.numero_sala
+        AND ms.horario       = m.horario
+WHERE m.status = 'ativo'
+  AND (m.desconto > 0 OR m.bolsa > 0)
+ORDER BY total_beneficio DESC;
+
+
+-- ============================================================
+-- BLOCO 3 — FINANCEIRO: DESPESAS
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 3.1 Faturas vencidas não pagas por fornecedor
+-- ------------------------------------------------------------
+SELECT
+    f.cnpj_fornecedor,
+    fo.nome_fantasia,
+    f.numero_fatura,
+    f.descricao,
+    f.valor_original,
+    f.data_vencimento,
+    DATEDIFF(CURDATE(), f.data_vencimento)                       AS dias_atraso
+FROM tb_faturas f
+INNER JOIN tb_fornecedores fo ON fo.cnpj = f.cnpj_fornecedor
+WHERE f.status = 'pendente'
+  AND f.data_vencimento < CURDATE()
+ORDER BY dias_atraso DESC;
+
+
+-- ------------------------------------------------------------
+-- 3.2 Total de despesas por categoria no mês
+-- ------------------------------------------------------------
+SELECT
+    cd.nome                                                       AS categoria,
+    MONTH(f.data_vencimento)                                      AS mes,
+    YEAR(f.data_vencimento)                                       AS ano,
+    COUNT(*)                                                      AS total_faturas,
+    SUM(f.valor_original)                                        AS total_valor
+FROM tb_faturas f
+INNER JOIN tb_categorias_despesas cd ON cd.codigo_categoria = f.codigo_categoria
+GROUP BY
+    cd.nome,
+    MONTH(f.data_vencimento),
+    YEAR(f.data_vencimento)
+ORDER BY ano, mes, total_valor DESC;
+
+
+-- ------------------------------------------------------------
+-- 3.3 DRE simplificado — receitas vs despesas por mês
+-- ------------------------------------------------------------
+SELECT
+    mes,
+    ano,
+    SUM(receita)                                                  AS total_receita,
+    SUM(despesa)                                                  AS total_despesa,
+    SUM(receita) - SUM(despesa)                                  AS resultado
+FROM (
+    SELECT
+        MONTH(data_vencimento)  AS mes,
+        YEAR(data_vencimento)   AS ano,
+        valor                   AS receita,
+        0                       AS despesa
+    FROM tb_mensalidades
+    WHERE status = 'pago'
+
+    UNION ALL
+
+    SELECT
+        MONTH(data_vencimento),
+        YEAR(data_vencimento),
+        0,
+        valor_original
+    FROM tb_faturas
+    WHERE status = 'pago'
+) AS dre
+GROUP BY mes, ano
+ORDER BY ano, mes;
+
+
+-- ------------------------------------------------------------
+-- 3.4 Fornecedores com maior volume de faturas
+-- ------------------------------------------------------------
+SELECT
+    fo.cnpj,
+    fo.nome_fantasia,
+    COUNT(f.numero_fatura)                                        AS total_faturas,
+    SUM(f.valor_original)                                        AS valor_total,
+    SUM(CASE WHEN f.status = 'pago'     THEN f.valor_original ELSE 0 END) AS valor_pago,
+    SUM(CASE WHEN f.status = 'pendente' THEN f.valor_original ELSE 0 END) AS valor_pendente
+FROM tb_fornecedores fo
+INNER JOIN tb_faturas f ON f.cnpj_fornecedor = fo.cnpj
+GROUP BY fo.cnpj, fo.nome_fantasia
+ORDER BY valor_total DESC;
+
+
+-- ============================================================
+-- BLOCO 4 — RH
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 4.1 Horas trabalhadas por funcionário no mês
+-- ------------------------------------------------------------
+SELECT
+    rp.cpf_funcionario,
+    p.nome                                                        AS nome_funcionario,
+    MONTH(rp.data)                                                AS mes,
+    YEAR(rp.data)                                                 AS ano,
+    COUNT(*)                                                      AS dias_trabalhados,
+    SEC_TO_TIME(
+        SUM(TIME_TO_SEC(TIMEDIFF(rp.hora_saida, rp.hora_entrada)))
+    )                                                             AS total_horas_trabalhadas
+FROM tb_registros_ponto rp
+INNER JOIN tb_pessoas p ON p.cpf = rp.cpf_funcionario
+GROUP BY
+    rp.cpf_funcionario,
+    p.nome,
+    MONTH(rp.data),
+    YEAR(rp.data)
+ORDER BY ano, mes, nome_funcionario;
+
+
+-- ------------------------------------------------------------
+-- 4.2 Folha de pagamento consolidada por mês com total de encargos
+-- ------------------------------------------------------------
+SELECT
+    fp.mes,
+    fp.ano,
+    COUNT(fp.cpf_funcionario)                                     AS total_funcionarios,
+    SUM(fp.valor_base)                                           AS total_salario_base,
+    SUM(fp.bonus)                                                AS total_bonus,
+    SUM(fp.descontos)                                            AS total_descontos,
+    SUM(fp.valor_final)                                          AS total_liquido
+FROM tb_folha_pagamento fp
+GROUP BY fp.mes, fp.ano
+ORDER BY fp.ano, fp.mes;
+
+
+-- ------------------------------------------------------------
+-- 4.3 Funcionários por cargo ativo
+-- ------------------------------------------------------------
+SELECT
+    c.nome_cargo,
+    COUNT(cf.cpf_funcionario)                                     AS total_funcionarios,
+    GROUP_CONCAT(p.nome ORDER BY p.nome SEPARATOR ', ')          AS funcionarios
+FROM tb_cargos_funcionario cf
+INNER JOIN tb_cargos  c ON c.cod_cargo        = cf.cod_cargo
+INNER JOIN tb_pessoas p ON p.cpf              = cf.cpf_funcionario
+WHERE cf.ativo = TRUE
+GROUP BY c.cod_cargo, c.nome_cargo
+ORDER BY total_funcionarios DESC;
+
+
+-- ------------------------------------------------------------
+-- 4.4 Professores e quantas turmas estão lecionando atualmente
+-- ------------------------------------------------------------
+SELECT
+    t.cpf_professor,
+    p.nome                                                        AS nome_professor,
+    COUNT(*)                                                      AS total_turmas,
+    GROUP_CONCAT(
+        CONCAT(t.codigo_idioma, ' ', t.codigo_nivel, ' - ', t.horario)
+        ORDER BY t.codigo_idioma
+        SEPARATOR ' | '
+    )                                                             AS turmas
+FROM tb_turmas t
+INNER JOIN tb_pessoas p ON p.cpf = t.cpf_professor
+WHERE t.status = 'ativo'
+GROUP BY t.cpf_professor, p.nome
+ORDER BY total_turmas DESC;
+
+
+-- ============================================================
+-- BLOCO 5 — OPERACIONAL
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 5.1 Salas com maior ocupação
+-- ------------------------------------------------------------
+SELECT
+    s.numero_sala,
+    s.capacidade,
+    COUNT(m.cpf_aluno)                                            AS alunos_matriculados,
+    ROUND(COUNT(m.cpf_aluno) / s.capacidade * 100, 2)           AS percentual_ocupacao
+FROM tb_salas s
+LEFT JOIN tb_turmas t ON t.numero_sala = s.numero_sala
+                      AND t.status     = 'ativo'
+LEFT JOIN tb_matriculas m
+       ON  m.codigo_idioma = t.codigo_idioma
+       AND m.codigo_nivel  = t.codigo_nivel
+       AND m.numero_sala   = t.numero_sala
+       AND m.horario       = t.horario
+       AND m.status        = 'ativo'
+GROUP BY s.numero_sala, s.capacidade
+ORDER BY percentual_ocupacao DESC;
+
+
+-- ------------------------------------------------------------
+-- 5.2 Turmas sem professor titular definido
+-- ------------------------------------------------------------
+SELECT
+    t.codigo_idioma,
+    t.codigo_nivel,
+    t.numero_sala,
+    t.horario,
+    t.data_inicio,
+    t.status
+FROM tb_turmas t
+WHERE t.cpf_professor IS NULL
+ORDER BY t.data_inicio;
+
+
+-- ------------------------------------------------------------
+-- 5.3 Pedidos de compra pendentes com valor total estimado
+-- ------------------------------------------------------------
+SELECT
+    pc.cpf_solicitante,
+    p.nome                                                        AS nome_solicitante,
+    pc.data_pedido,
+    pc.status,
+    SUM(ip.quantidade * ip.valor_unitario)                       AS valor_total_estimado
+FROM tb_pedidos_compra pc
+INNER JOIN tb_pessoas p ON p.cpf = pc.cpf_solicitante
+INNER JOIN tb_itens_pedido ip
+        ON  ip.cpf_solicitante = pc.cpf_solicitante
+        AND ip.data_pedido     = pc.data_pedido
+WHERE pc.status = 'pendente'
+GROUP BY
+    pc.cpf_solicitante,
+    p.nome,
+    pc.data_pedido,
+    pc.status
+ORDER BY valor_total_estimado DESC;
+
+
+-- ------------------------------------------------------------
+-- 5.4 Aulas realizadas vs planejadas por turma no mês
+--     Considera aulas com status 'realizada' como realizadas
+--     e o total de registros na tabela como planejadas
+-- ------------------------------------------------------------
+SELECT
+    a.codigo_idioma,
+    a.codigo_nivel,
+    a.numero_sala,
+    a.horario,
+    MONTH(a.data_aula)                                            AS mes,
+    YEAR(a.data_aula)                                             AS ano,
+    COUNT(*)                                                      AS total_planejadas,
+    SUM(CASE WHEN a.status = 'realizada' THEN 1 ELSE 0 END)      AS total_realizadas,
+    SUM(CASE WHEN a.status != 'realizada' THEN 1 ELSE 0 END)     AS total_pendentes
+FROM tb_aulas a
+GROUP BY
+    a.codigo_idioma,
+    a.codigo_nivel,
+    a.numero_sala,
+    a.horario,
+    MONTH(a.data_aula),
+    YEAR(a.data_aula)
+ORDER BY ano, mes;

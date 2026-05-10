@@ -1,0 +1,453 @@
+CREATE DATABASE projetoSisgesc;
+
+USE projetoSisgesc;
+
+-- ========================================
+-- PESSOAS
+-- ========================================
+CREATE TABLE `tb_pessoas` (
+  `cpf`              char(11)     NOT NULL,
+  `nome`             varchar(255),
+  `data_nascimento`  date,
+  CONSTRAINT `pk_pessoas` PRIMARY KEY (`cpf`)
+);
+
+-- ========================================
+-- TELEFONES
+-- ========================================
+CREATE TABLE `tb_telefones` (
+  `cpf_pessoa`  char(11),
+  `ddd`         char(2),
+  `numero`      varchar(9),
+  `tipo`        varchar(50),
+  CONSTRAINT `pk_telefones` PRIMARY KEY (`cpf_pessoa`, `ddd`, `numero`),
+  CONSTRAINT `fk_telefones_pessoa` FOREIGN KEY (`cpf_pessoa`) REFERENCES `tb_pessoas` (`cpf`)
+);
+
+-- ========================================
+-- EMAILS
+-- ========================================
+CREATE TABLE `tb_emails` (
+  `cpf_pessoa`  char(11)     NOT NULL,
+  `email`       varchar(100) NOT NULL,
+  CONSTRAINT `pk_emails` PRIMARY KEY (`cpf_pessoa`, `email`),
+  CONSTRAINT `fk_emails_pessoa` FOREIGN KEY (`cpf_pessoa`)
+    REFERENCES `tb_pessoas` (`cpf`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+
+-- ========================================
+-- ENDEREÇOS
+-- ========================================
+CREATE TABLE `tb_enderecos` (
+  `cpf_pessoa`   char(11),
+  `tipo`         varchar(50),
+  `cep`          varchar(8),
+  `numero`       varchar(20),
+  `rua`          varchar(150),
+  `complemento`  varchar(150),
+  `bairro`       varchar(100),
+  `cidade`       varchar(100),
+  `estado`       char(2),
+  CONSTRAINT `pk_enderecos` PRIMARY KEY (`cpf_pessoa`, `cep`, `numero`),
+  CONSTRAINT `fk_enderecos_pessoa` FOREIGN KEY (`cpf_pessoa`) REFERENCES `tb_pessoas` (`cpf`)
+);
+
+-- ========================================
+-- ALUNOS
+-- ========================================
+CREATE TABLE `tb_alunos` (
+  `cpf_aluno`  char(11)    NOT NULL,
+  `status`     varchar(50),
+  CONSTRAINT `pk_alunos` PRIMARY KEY (`cpf_aluno`),
+  CONSTRAINT `fk_alunos_pessoa` FOREIGN KEY (`cpf_aluno`) REFERENCES `tb_pessoas` (`cpf`)
+);
+
+-- ========================================
+-- FUNCIONÁRIOS
+-- ========================================
+CREATE TABLE `tb_funcionarios` (
+  `cpf_funcionario`   char(11) NOT NULL,
+  `data_contratacao`  date,
+  `status`            varchar(50),
+  CONSTRAINT `pk_funcionarios` PRIMARY KEY (`cpf_funcionario`),
+  CONSTRAINT `fk_funcionarios_pessoa` FOREIGN KEY (`cpf_funcionario`) REFERENCES `tb_pessoas` (`cpf`)
+);
+
+-- ========================================
+-- CARGOS
+-- ========================================
+CREATE TABLE `tb_cargos` (
+  `cod_cargo`   int          NOT NULL,
+  `nome_cargo`  varchar(150),
+  CONSTRAINT `pk_cargos` PRIMARY KEY (`cod_cargo`)
+);
+
+-- ========================================
+-- CARGOS FUNCIONÁRIO
+-- ========================================
+CREATE TABLE `tb_cargos_funcionario` (
+  `cpf_funcionario`  char(11) NOT NULL,
+  `cod_cargo`        int      NOT NULL,
+  `data_inicio`      date,
+  `data_fim`         date,
+  `ativo`            boolean,
+  CONSTRAINT `pk_cargos_funcionario` PRIMARY KEY (`cpf_funcionario`, `cod_cargo`),
+  CONSTRAINT `fk_cargofunc_funcionario` FOREIGN KEY (`cpf_funcionario`) REFERENCES `tb_funcionarios` (`cpf_funcionario`),
+  CONSTRAINT `fk_cargofunc_cargo`       FOREIGN KEY (`cod_cargo`)        REFERENCES `tb_cargos` (`cod_cargo`)
+);
+
+-- ========================================
+-- BENEFÍCIOS
+-- ========================================
+CREATE TABLE `tb_beneficios` (
+  `tipo`          varchar(50)    NOT NULL,
+  `valor_inicial` decimal(10,2)  NOT NULL,
+  `valor_final`   decimal(10,2)  NOT NULL,
+  CONSTRAINT `pk_beneficios` PRIMARY KEY (`tipo`)
+);
+
+-- ========================================
+-- IDIOMAS
+-- ========================================
+CREATE TABLE `tb_idiomas` (
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `nome`           varchar(100),
+  CONSTRAINT `pk_idiomas` PRIMARY KEY (`codigo_idioma`)
+);
+
+-- ========================================
+-- NÍVEIS
+-- ========================================
+CREATE TABLE `tb_niveis` (
+  `codigo_nivel`  varchar(10)  NOT NULL,
+  `nome`          varchar(100),
+  CONSTRAINT `pk_niveis` PRIMARY KEY (`codigo_nivel`)
+);
+
+-- ========================================
+-- CURSOS
+-- ========================================
+CREATE TABLE `tb_cursos` (
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `codigo_nivel`   varchar(10)  NOT NULL,
+  `nome_curso`     varchar(150),
+  `carga_horaria`  int,
+  CONSTRAINT `pk_cursos` PRIMARY KEY (`codigo_idioma`, `codigo_nivel`),
+  CONSTRAINT `fk_cursos_idioma` FOREIGN KEY (`codigo_idioma`) REFERENCES `tb_idiomas` (`codigo_idioma`),
+  CONSTRAINT `fk_cursos_nivel`  FOREIGN KEY (`codigo_nivel`)  REFERENCES `tb_niveis` (`codigo_nivel`)
+);
+
+-- ========================================
+-- SALAS
+-- ========================================
+CREATE TABLE `tb_salas` (
+  `numero_sala`  varchar(50)  NOT NULL,
+  `capacidade`   int,
+  CONSTRAINT `pk_salas` PRIMARY KEY (`numero_sala`)
+);
+
+-- ========================================
+-- TURMAS
+-- ========================================
+CREATE TABLE `tb_turmas` (
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `codigo_nivel`   varchar(10)  NOT NULL,
+  `numero_sala`    varchar(50)  NOT NULL,
+  `horario`        varchar(100) NOT NULL,
+  `cpf_professor`  char(11),
+  `data_inicio`    date,
+  `data_fim`       date,
+  `status`         varchar(50),
+  CONSTRAINT `pk_turmas` PRIMARY KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`),
+  CONSTRAINT `fk_turmas_curso`      FOREIGN KEY (`codigo_idioma`, `codigo_nivel`) REFERENCES `tb_cursos` (`codigo_idioma`, `codigo_nivel`),
+  CONSTRAINT `fk_turmas_sala`       FOREIGN KEY (`numero_sala`)                   REFERENCES `tb_salas` (`numero_sala`),
+  CONSTRAINT `fk_turmas_professor`  FOREIGN KEY (`cpf_professor`)                 REFERENCES `tb_funcionarios` (`cpf_funcionario`)
+);
+
+-- ========================================
+-- PROFESSORES TURMAS
+-- ========================================
+CREATE TABLE `tb_professores_turmas` (
+  `cpf_professor`  char(11)     NOT NULL,
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `codigo_nivel`   varchar(10)  NOT NULL,
+  `numero_sala`    varchar(50)  NOT NULL,
+  `horario`        varchar(100) NOT NULL,
+  CONSTRAINT `pk_professores_turmas` PRIMARY KEY (`cpf_professor`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`),
+  CONSTRAINT `fk_profturn_professor` FOREIGN KEY (`cpf_professor`)                                   REFERENCES `tb_funcionarios` (`cpf_funcionario`),
+  CONSTRAINT `fk_profturn_turma`     FOREIGN KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`) REFERENCES `tb_turmas` (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)
+);
+
+-- ========================================
+-- AULAS
+-- ========================================
+CREATE TABLE `tb_aulas` (
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `codigo_nivel`   varchar(10)  NOT NULL,
+  `numero_sala`    varchar(50)  NOT NULL,
+  `horario`        varchar(100) NOT NULL,
+  `data_aula`      date         NOT NULL,
+  `cpf_professor`  char(11),
+  `hora_inicio`    time,
+  `intervalo`      time,
+  `hora_fim`       time,
+  `status`         varchar(50),
+  CONSTRAINT `pk_aulas` PRIMARY KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `data_aula`),
+  CONSTRAINT `fk_aulas_turma`     FOREIGN KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`) REFERENCES `tb_turmas` (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`),
+  CONSTRAINT `fk_aulas_professor` FOREIGN KEY (`cpf_professor`) REFERENCES `tb_funcionarios` (`cpf_funcionario`)
+);
+
+-- ========================================
+-- MATRÍCULAS
+-- ========================================
+CREATE TABLE `tb_matriculas` (
+  `cpf_aluno`      char(11)     NOT NULL,
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `codigo_nivel`   varchar(10)  NOT NULL,
+  `numero_sala`    varchar(50)  NOT NULL,
+  `horario`        varchar(100) NOT NULL,
+  `data_matricula` date,
+  `desconto`       decimal(10,2),
+  `bolsa`          decimal(10,2),
+  `status`         varchar(50),
+  CONSTRAINT `pk_matriculas` PRIMARY KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`),
+  CONSTRAINT `fk_matriculas_aluno` FOREIGN KEY (`cpf_aluno`)                                                   REFERENCES `tb_alunos` (`cpf_aluno`),
+  CONSTRAINT `fk_matriculas_turma` FOREIGN KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)     REFERENCES `tb_turmas` (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)
+);
+
+-- ========================================
+-- MENSALIDADES
+-- ========================================
+CREATE TABLE `tb_mensalidades` (
+  `cpf_aluno`       char(11)     NOT NULL,
+  `codigo_idioma`   varchar(3)   NOT NULL,
+  `codigo_nivel`    varchar(10)  NOT NULL,
+  `numero_sala`     varchar(50)  NOT NULL,
+  `horario`         varchar(100) NOT NULL,
+  `data_vencimento` date         NOT NULL,
+  `data_pagamento`  date,
+  `valor`           decimal(10,2),
+  `status`          varchar(50),
+  CONSTRAINT `pk_mensalidades` PRIMARY KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `data_vencimento`),
+  CONSTRAINT `fk_mensalidades_matricula` FOREIGN KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`) REFERENCES `tb_matriculas` (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)
+);
+
+-- ========================================
+-- FATURAMENTOS
+-- ========================================
+CREATE TABLE `tb_faturamentos` (
+  `numero_documento`  varchar(100) NOT NULL,
+  `cpf_aluno_mens`    char(11),
+  `codigo_idioma`     varchar(3),
+  `codigo_nivel`      varchar(10),
+  `numero_sala`       varchar(50),
+  `horario`           varchar(100),
+  `data_vencimento`   date,
+  `tipo_documento`    varchar(100),
+  `data_emissao`      date,
+  `valor`             decimal(10,2),
+  CONSTRAINT `pk_faturamentos` PRIMARY KEY (`numero_documento`),
+  CONSTRAINT `fk_faturamentos_mensalidade` FOREIGN KEY (`cpf_aluno_mens`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `data_vencimento`) REFERENCES `tb_mensalidades` (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `data_vencimento`)
+);
+
+-- ========================================
+-- FORNECEDORES
+-- ========================================
+CREATE TABLE `tb_fornecedores` (
+  `cnpj`          char(14)     NOT NULL,
+  `cpf_pessoa`    char(11),
+  `nome_fantasia` varchar(255),
+  CONSTRAINT `pk_fornecedores` PRIMARY KEY (`cnpj`),
+  CONSTRAINT `fk_fornecedores_pessoa` FOREIGN KEY (`cpf_pessoa`) REFERENCES `tb_pessoas` (`cpf`)
+);
+
+-- ========================================
+-- CATEGORIAS DESPESAS
+-- ========================================
+CREATE TABLE `tb_categorias_despesas` (
+  `codigo_categoria`  varchar(10)  NOT NULL,
+  `nome`              varchar(150),
+  `tipo`              varchar(50),
+  CONSTRAINT `pk_categorias_despesas` PRIMARY KEY (`codigo_categoria`)
+);
+
+-- ========================================
+-- FATURAS
+-- ========================================
+CREATE TABLE `tb_faturas` (
+  `cnpj_fornecedor`  char(14)      NOT NULL,
+  `numero_fatura`    varchar(100)  NOT NULL,
+  `codigo_categoria` varchar(10),
+  `descricao`        varchar(255),
+  `valor_original`   decimal(10,2),
+  `juros`            decimal(10,2),
+  `multa`            decimal(10,2),
+  `data_emissao`     date,
+  `data_vencimento`  date,
+  `status`           varchar(50),
+  CONSTRAINT `pk_faturas` PRIMARY KEY (`cnpj_fornecedor`, `numero_fatura`),
+  CONSTRAINT `fk_faturas_fornecedor` FOREIGN KEY (`cnpj_fornecedor`)   REFERENCES `tb_fornecedores` (`cnpj`),
+  CONSTRAINT `fk_faturas_categoria`  FOREIGN KEY (`codigo_categoria`)  REFERENCES `tb_categorias_despesas` (`codigo_categoria`)
+);
+
+-- ========================================
+-- PAGAMENTOS FATURAS
+-- ========================================
+CREATE TABLE `tb_pagamentos_faturas` (
+  `cnpj_fornecedor`   char(14)     NOT NULL,
+  `numero_fatura`     varchar(100) NOT NULL,
+  `data_pagamento`    date         NOT NULL,
+  `valor_pago`        decimal(10,2),
+  `metodo_pagamento`  varchar(50),
+  `comprovante_url`   varchar(255),
+  CONSTRAINT `pk_pagamentos_faturas` PRIMARY KEY (`cnpj_fornecedor`, `numero_fatura`, `data_pagamento`),
+  CONSTRAINT `fk_pagfaturas_fatura` FOREIGN KEY (`cnpj_fornecedor`, `numero_fatura`) REFERENCES `tb_faturas` (`cnpj_fornecedor`, `numero_fatura`)
+);
+
+-- ========================================
+-- FOLHA DE PAGAMENTO
+-- ========================================
+CREATE TABLE `tb_folha_pagamento` (
+  `cpf_funcionario`  char(11)      NOT NULL,
+  `mes`              int           NOT NULL,
+  `ano`              int           NOT NULL,
+  `valor_base`       decimal(10,2),
+  `bonus`            decimal(10,2),
+  `descontos`        decimal(10,2),
+  `valor_final`      decimal(10,2),
+  `status`           varchar(50),
+  CONSTRAINT `pk_folha_pagamento` PRIMARY KEY (`cpf_funcionario`, `mes`, `ano`),
+  CONSTRAINT `fk_folha_funcionario` FOREIGN KEY (`cpf_funcionario`) REFERENCES `tb_funcionarios` (`cpf_funcionario`)
+);
+
+-- ========================================
+-- PAGAMENTOS FUNCIONÁRIOS
+-- ========================================
+CREATE TABLE `tb_pagamentos_funcionarios` (
+  `cpf_funcionario`   char(11)     NOT NULL,
+  `mes`               int          NOT NULL,
+  `ano`               int          NOT NULL,
+  `data_pagamento`    date         NOT NULL,
+  `metodo_pagamento`  varchar(50),
+  `comprovante_url`   varchar(255),
+  CONSTRAINT `pk_pagamentos_funcionarios` PRIMARY KEY (`cpf_funcionario`, `mes`, `ano`, `data_pagamento`),
+  CONSTRAINT `fk_pagfunc_folha` FOREIGN KEY (`cpf_funcionario`, `mes`, `ano`) REFERENCES `tb_folha_pagamento` (`cpf_funcionario`, `mes`, `ano`)
+);
+
+-- ========================================
+-- PAGAMENTOS BENEFÍCIOS
+-- ========================================
+CREATE TABLE `tb_pagamentos_beneficios` (
+  `id_pagamento`          int          NOT NULL AUTO_INCREMENT,
+  `tipo`                  varchar(50),
+  `cpf_funcionarios`      char(11),
+  `comprovante_pagamento` varchar(255),
+  `ano`                   int,
+  `mes`                   int,
+  `data_pagamento`        date,
+  `metodo_pagamento`      varchar(50),
+  `status`                varchar(50),
+  CONSTRAINT `pk_pagamentos_beneficios` PRIMARY KEY (`id_pagamento`),
+  CONSTRAINT `fk_pagbenef_beneficio`   FOREIGN KEY (`tipo`)             REFERENCES `tb_beneficios` (`tipo`),
+  CONSTRAINT `fk_pagbenef_funcionario` FOREIGN KEY (`cpf_funcionarios`) REFERENCES `tb_funcionarios` (`cpf_funcionario`)
+);
+
+-- ========================================
+-- PEDIDOS DE COMPRA
+-- ========================================
+CREATE TABLE `tb_pedidos_compra` (
+  `cpf_solicitante`  char(11)  NOT NULL,
+  `data_pedido`      date      NOT NULL,
+  `status`           varchar(50),
+  CONSTRAINT `pk_pedidos_compra` PRIMARY KEY (`cpf_solicitante`, `data_pedido`),
+  CONSTRAINT `fk_pedidos_funcionario` FOREIGN KEY (`cpf_solicitante`) REFERENCES `tb_funcionarios` (`cpf_funcionario`)
+);
+
+-- ========================================
+-- ITENS PEDIDO
+-- ========================================
+CREATE TABLE `tb_itens_pedido` (
+  `cpf_solicitante`  char(11)      NOT NULL,
+  `data_pedido`      date          NOT NULL,
+  `descricao`        varchar(255)  NOT NULL,
+  `quantidade`       int,
+  `valor_unitario`   decimal(10,2),
+  CONSTRAINT `pk_itens_pedido` PRIMARY KEY (`cpf_solicitante`, `data_pedido`, `descricao`),
+  CONSTRAINT `fk_itens_pedido` FOREIGN KEY (`cpf_solicitante`, `data_pedido`) REFERENCES `tb_pedidos_compra` (`cpf_solicitante`, `data_pedido`)
+);
+
+-- ========================================
+-- FREQUÊNCIAS
+-- ========================================
+CREATE TABLE `tb_frequencias` (
+  `cpf_aluno`      char(11)     NOT NULL,
+  `codigo_idioma`  varchar(3)   NOT NULL,
+  `codigo_nivel`   varchar(10)  NOT NULL,
+  `numero_sala`    varchar(50)  NOT NULL,
+  `horario`        varchar(100) NOT NULL,
+  `data_aula`      date         NOT NULL,
+  `presente`       boolean,
+  `observacao`     varchar(255),
+  CONSTRAINT `pk_frequencias` PRIMARY KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `data_aula`),
+  CONSTRAINT `fk_frequencias_matricula` FOREIGN KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`) REFERENCES `tb_matriculas` (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)
+);
+
+-- ========================================
+-- AVALIAÇÕES
+-- ========================================
+CREATE TABLE `tb_avaliacoes` (
+  `codigo_idioma`   varchar(3)   NOT NULL,
+  `codigo_nivel`    varchar(10)  NOT NULL,
+  `numero_sala`     varchar(50)  NOT NULL,
+  `horario`         varchar(100) NOT NULL,
+  `titulo`          varchar(100) NOT NULL,
+  `tipo`            varchar(50),
+  `data_avaliacao`  date,
+  `peso`            decimal(5,2),
+  CONSTRAINT `pk_avaliacoes` PRIMARY KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `titulo`),
+  CONSTRAINT `fk_avaliacoes_turma` FOREIGN KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`) REFERENCES `tb_turmas` (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)
+);
+
+-- ========================================
+-- NOTAS
+-- ========================================
+CREATE TABLE `tb_notas` (
+  `cpf_aluno`         char(11)     NOT NULL,
+  `codigo_idioma`     varchar(3)   NOT NULL,
+  `codigo_nivel`      varchar(10)  NOT NULL,
+  `numero_sala`       varchar(50)  NOT NULL,
+  `horario`           varchar(100) NOT NULL,
+  `titulo_avaliacao`  varchar(100) NOT NULL,
+  `nota`              decimal(5,2),
+  `observacao`        varchar(255),
+  CONSTRAINT `pk_notas` PRIMARY KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `titulo_avaliacao`),
+  CONSTRAINT `fk_notas_matricula`  FOREIGN KEY (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`)            REFERENCES `tb_matriculas` (`cpf_aluno`, `codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`),
+  CONSTRAINT `fk_notas_avaliacao`  FOREIGN KEY (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `titulo_avaliacao`)     REFERENCES `tb_avaliacoes` (`codigo_idioma`, `codigo_nivel`, `numero_sala`, `horario`, `titulo`)
+);
+
+-- ========================================
+-- REGISTROS DE PONTO
+-- ========================================
+CREATE TABLE `tb_registros_ponto` (
+  `cpf_funcionario`  char(11)  NOT NULL,
+  `data`             date      NOT NULL,
+  `hora_entrada`     time,
+  `hora_saida`       time,
+  CONSTRAINT `pk_registros_ponto` PRIMARY KEY (`cpf_funcionario`, `data`),
+  CONSTRAINT `fk_ponto_funcionario` FOREIGN KEY (`cpf_funcionario`) REFERENCES `tb_funcionarios` (`cpf_funcionario`)
+);
+
+-- ========================================
+-- EXPULSOS
+-- ========================================
+CREATE TABLE `tb_expulsos` (
+  `nome_do_aluno`      char(30)  NOT NULL,
+  `data_expulsao`      date      NOT NULL,
+  `cpf_aluno_expulso`  char(11)  NOT NULL,
+  CONSTRAINT `fk_expulsos_aluno` FOREIGN KEY (`cpf_aluno_expulso`) REFERENCES `tb_alunos` (`cpf_aluno`)
+);
+
+DESCRIBE tb_matriculas;
+DESCRIBE tb_expulsos;
