@@ -216,14 +216,4 @@ WHERE status = 'pendente'
   AND data_vencimento < CURDATE();
 ```
 
----
 
-## 👥 Dados de Exemplo
-
-O seed popula o banco com:
-- **15 pessoas** (5 alunos, 5 funcionários, 5 fornecedores)
-- **5 turmas** ativas (Inglês, Espanhol, Francês, Alemão)
-- **5 matrículas** com diferentes status, descontos e bolsas
-- **5 mensalidades** (3 pagas, 2 pendentes)
-- **5 faturas** de fornecedores (2 pagas, 3 pendentes)
-- **1 aluno expulso** registrado em `tb_expulsos`
